@@ -1,7 +1,9 @@
-import subprocess
 import pathlib
-import shutil
 import re
+import shutil
+import subprocess
+import time
+from typing import Generator, Union
 
 # TODO: Extract supported formats to json file in future to separate
 #       configuration from logic.
@@ -33,7 +35,7 @@ def is_ffmpeg_installed() -> bool:
 
 
 def is_supported_file(file_path: pathlib.Path) -> bool:
-    """Validates whether the input file exists 
+    """Validates whether the input file exists
         and has a supported extension."""
     if file_path.is_file() and file_path.suffix.lower() in SUFFIX_FORMATS:
         return True
@@ -87,26 +89,26 @@ def prep_ffmpeg(file_path: pathlib.Path, new_file_path: pathlib.Path,
     """
     Prepare and check an FFmpeg command for video processing.
 
-    This function builds a list of FFmpeg arguments using the input/output 
-    paths, video width, codec, and GPU settings. You can add extra FFmpeg flags 
+    This function builds a list of FFmpeg arguments using the input/output
+    paths, video width, codec, and GPU settings. You can add extra FFmpeg flags
     using keyword arguments. If the parameters are invalid, it returns None.
 
     Args:
         file_path (pathlib.Path): Path to the input video file.
         new_file_path (pathlib.Path): Path for the output video file.
-        width (int): Original video width in pixels (used to trigger 
+        width (int): Original video width in pixels (used to trigger
             GPU logic).
         codec (str, optional): Video codec to use. Defaults to 'libx264'.
-        is_gpu (bool, optional): Whether to use GPU acceleration. Defaults 
+        is_gpu (bool, optional): Whether to use GPU acceleration. Defaults
             to False.
-        gpu_vendor (str, optional): GPU brand (NVIDIA, AMD, INTEL). 
+        gpu_vendor (str, optional): GPU brand (NVIDIA, AMD, INTEL).
             Defaults to the global `GPU` variable.
-        **ffmpeg_params: Extra FFmpeg flags. Boolean True values add only the 
-            flag (e.g. an=True adds '-an'), while other values add both the 
+        **ffmpeg_params: Extra FFmpeg flags. Boolean True values add only the
+            flag (e.g. an=True adds '-an'), while other values add both the
             flag and the value.
 
     Returns:
-        list[str] | None: A list of command arguments for 'subprocess', 
+        list[str] | None: A list of command arguments for 'subprocess',
         or None if the parameters are wrong.
 
     Example:
@@ -122,59 +124,72 @@ def prep_ffmpeg(file_path: pathlib.Path, new_file_path: pathlib.Path,
         ... }
         >>> prep_ffmpeg(input_vid, output_vid, width=1920, **custom_params)
     """
-    ffmpeg_args = ['ffmpeg', '-y', '-hide_banner', '-loglevel', 'info']
+    ffmpeg_prompt = ['ffmpeg', '-y', '-hide_banner', '-loglevel', 'info']
 
     if is_gpu and width >= 3840:  # for 4k or higher quality
         match gpu_vendor.upper():
             case 'NVIDIA':
-                ffmpeg_args.extend(['-hwaccel', 'cuda'])
+                ffmpeg_prompt.extend(['-hwaccel', 'cuda'])
             case 'AMD':
-                ffmpeg_args.extend(['-hwaccel', 'd3d11va'])
+                ffmpeg_prompt.extend(['-hwaccel', 'd3d11va'])
             case 'INTEL':
-                ffmpeg_args.extend(['-hwaccel', 'qsv'])
+                ffmpeg_prompt.extend(['-hwaccel', 'qsv'])
 
-    ffmpeg_args.extend([
+    ffmpeg_prompt.extend([
         '-i', str(file_path),
         '-c:v', codec,
     ])
 
     for key, value in ffmpeg_params.items():
-        if isinstance(value, bool):  # check whether it is bool
+        if isinstance(value, bool):  # check wheteher is bool
             if value is True:  # if False ignore
-                ffmpeg_args.append(f'-{key}')
-        ffmpeg_args.append(f'-{key}')
-        ffmpeg_args.append(str(value))
+                ffmpeg_prompt.append(f'-{key}')
+        ffmpeg_prompt.append(f'-{key}')
+        ffmpeg_prompt.append(str(value))
 
-    ffmpeg_args.append(str(new_file_path))
+    ffmpeg_prompt.append(str(new_file_path))
 
-    test_prompt = ffmpeg_args[:-1] + ['-frames:v', '1', '-f', 'null', '-']
+    test_prompt = ffmpeg_prompt[:-1] + ['-frames:v', '1', '-f', 'null', '-']
     try:
         subprocess.run(test_prompt, capture_output=True, text=True, check=True)
-        return ffmpeg_args
+        return ffmpeg_prompt
     except subprocess.CalledProcessError as e:
         print(f'ERROR: {e.stderr.strip()}')
         return None
 
 
-def run_ffmpeg(cmd_params: list[str]) -> None:
+def run_ffmpeg(cmd_params: list[str]) -> Generator[dict[str, Union[
+        float, str]], None, None]:
     """
-    Run FFmpeg and show a real-time progress bar in the terminal.
+    Run FFmpeg as a subprocess and yield real-time progress data.
 
-    This function parses FFmpeg output to show percentage, time, and ETA.
-    It is recommended to use 'prep_ffmpeg' to create the 'cmd_params' list 
-    before calling this function to ensure the command is valid.
+    Parses FFmpeg stdout to estimate completion percentage, remaining time,
+    and current bitrate.
 
     Args:
-        cmd_params (list[str]): Valid list of FFmpeg arguments.
+        cmd_params (list[str]): FFmpeg command arguments.
+
+    Yields:
+        dict: Progress data with keys:
+            - percent (float): Completion percentage. (Or 'N/A')
+            - time_left (str): Estimated time remaining (Or 'N/A')
+            - bitrate (str): Current bitrate (Or 'N/A').
+
+    Raises:
+        ValueError: If the 'cmd_params' list is empty.
+        InvalidMediaError: If FFmpeg exits with a non-zero code.
     """
 
     if not cmd_params:
-        return
+        raise ValueError(
+            "The 'cmd_params' list is empty. Please provide"
+            " valid FFmpeg arguments."
+        )
+    process = None
     try:
         idx = cmd_params.index('-i')
         path = pathlib.Path(cmd_params[idx + 1])
 
-        file_name = path.name
         video_length = get_video_length(path)
 
         process = subprocess.Popen(cmd_params, stdout=subprocess.PIPE,
@@ -183,15 +198,14 @@ def run_ffmpeg(cmd_params: list[str]) -> None:
                                    encoding='utf-8')
 
         required = ('time', 'bitrate', 'speed')
+        regex_parser = re.compile(r"(\w+)=\s*([^\s]+)")
+        first_time = time.monotonic()
         for line in process.stdout:
-            f_line = re.search(r'time=\d{2}', line)
-            if f_line:
-                c_line = line.replace('=', '= ')
-                parts = c_line.split()
-                d_line = {
-                    key.strip('='): value for key,
-                    value in zip(parts[0::2], parts[1::2])
-                }
+            if 'time=' in line:
+                second_time = time.monotonic()
+                if not (second_time - first_time >= 1.0 or 'bitrate:' in line):
+                    continue
+                d_line = dict(regex_parser.findall(line))
                 if not all(key in d_line for key in required):
                     continue
                 if ':' not in d_line['time']:
@@ -201,27 +215,53 @@ def run_ffmpeg(cmd_params: list[str]) -> None:
 
                 percent = min(100.0, (raw_time/video_length * 100))
                 str_time = d_line['speed'][:-1]
-                speed_val = float(str_time) if str_time not in (
-                    '0', '0.0', 'N/A') else 1.0
-                time_left = (video_length - raw_time) / \
-                    float(speed_val)
-                time_repr = f'{int(time_left // 3600)}:'\
-                    f'{int((time_left % 3600) // 60):02d}:{(time_left % 60):02.0f}'
+                try:
+                    speed_val = float(str_time)
+                    if speed_val <= 0.0:
+                        speed_val = 1.0
+                except ValueError:
+                    speed_val = 1.0
+                time_left = (
+                    max(0, (video_length - raw_time))
+                    / float(speed_val)
+                )
+                time_repr = (
+                    f'{int(time_left // 3600)}:'
+                    f'{int((time_left % 3600) // 60):02d}:'
+                    f'{(time_left % 60):02.0f}'
+                )
 
-                print(f'\rcompleted: {percent:.2f}% | {h:02}:{m:02}:{s:02} '
-                      f'| left: {time_repr} | bitrate: {d_line["bitrate"]:<15}',
-                      end='', flush=True)
+                yield {
+                    'percent': percent,
+                    'time_left': time_repr,
+                    'bitrate': d_line["bitrate"]
+                }
+                first_time = time.monotonic()
 
         process.wait()
-        print()
-        if process.returncode == 0:
-            print(f'\nVideo {file_name} completed! Saved in: {cmd_params[-1]}')
-        else:
-            print(f'\nFFmpeg finished with error code: {process.returncode}')
+        if process.returncode != 0:
+            err_msg = f"FFmpeg finished with error code: {process.returncode}"
+            raise InvalidMediaError(err_msg)
+        try:
+            if percent != 100.0:
+                yield {
+                    'percent': 100.0,
+                    'time_left': '0:00:00',
+                    'bitrate': d_line["bitrate"]
+                }
+        except (NameError, KeyError):
+            yield {
+                'percent': 'N/A',
+                'time_left': 'N/A',
+                'bitrate': 'N/A'
+            }
 
     except KeyboardInterrupt:
         print("\nProcess interrupted by user.")
-        if 'process' in locals():
-            process.terminate()
+
     except Exception as e:
-        print(f'\nUnexpected Error: {e}')
+        print(f'\nUnexcpeted Error: {e}')
+
+    finally:
+        if process is not None and process.poll() is None:
+            process.terminate()
