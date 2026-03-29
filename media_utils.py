@@ -73,7 +73,7 @@ def get_video_width(file_path: pathlib.Path) -> int:
         raise ValueError(error_msg) from e
 
 
-def get_video_length(file_path):
+def get_video_length(file_path: pathlib. Path):
     """Returns the total length of the video file in seconds."""
     result = subprocess.run(["ffprobe", "-v", "error", "-show_entries",
                              "format=duration", "-of",
@@ -144,6 +144,7 @@ def prep_ffmpeg(file_path: pathlib.Path, new_file_path: pathlib.Path,
         if isinstance(value, bool):  # check wheteher is bool
             if value is True:  # if False ignore
                 ffmpeg_prompt.append(f'-{key}')
+            continue
         ffmpeg_prompt.append(f'-{key}')
         ffmpeg_prompt.append(str(value))
 
@@ -159,7 +160,7 @@ def prep_ffmpeg(file_path: pathlib.Path, new_file_path: pathlib.Path,
 
 
 def run_ffmpeg(cmd_params: list[str]) -> Generator[dict[str, Union[
-        float, str]], None, None]:
+        float | str]], None, None]:
     """
     Run FFmpeg as a subprocess and yield real-time progress data.
 
