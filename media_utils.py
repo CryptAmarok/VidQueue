@@ -8,16 +8,11 @@ from typing import Generator, Union
 # TODO: Extract supported formats to json file in future to separate
 #       configuration from logic.
 SUFFIX_FORMATS = {
-    '.avi': 'avi',
-    '.flv': 'flv',
-    '.m4v': 'm4v',
-    '.mp4': 'mp4',
-    '.mkv': 'mkv',
-    '.mov': 'mov',
-    '.mpg': 'mpg',
-    '.mpeg': 'mpeg',
-    '.webm': 'webm',
-    '.wmv': 'wmv',
+    '.avi', '.flv',
+    '.m4v', '.mp4',
+    '.mkv', '.mov',
+    '.mpg', '.mpeg',
+    '.webm', '.wmv'
 }
 
 # TODO: same as Suffix
@@ -43,7 +38,7 @@ def is_supported_file(file_path: pathlib.Path) -> bool:
 
 
 def check_dest_path(path: pathlib.Path) -> None:
-    path = path.parent
+    """Check whether path is exists, if not, create it"""
     if not path.is_dir():
         path.mkdir(parents=True, exist_ok=True)
 
@@ -152,7 +147,10 @@ def prep_ffmpeg(file_path: pathlib.Path, new_file_path: pathlib.Path,
 
     test_prompt = ffmpeg_prompt[:-1] + ['-frames:v', '1', '-f', 'null', '-']
     try:
-        subprocess.run(test_prompt, capture_output=True, text=True, check=True)
+        subprocess.run(test_prompt,
+                       stdout=subprocess.DEVNULL,
+                       stderr=subprocess.PIPE,
+                       text=True, check=True)
         return ffmpeg_prompt
     except subprocess.CalledProcessError as e:
         print(f'ERROR: {e.stderr.strip()}')
