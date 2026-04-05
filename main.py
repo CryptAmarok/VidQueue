@@ -5,10 +5,11 @@ from pathlib import Path
 from typing import Any
 
 import media_utils
+from config_loader import CONFIG
 
-GPU = 'NVIDIA'
+GPU = CONFIG['hardware']['gpu']
 
-__version__ = '0.1.0'
+__version__ = CONFIG['project']['version']
 
 
 def _parse_value(value: str) -> Any:

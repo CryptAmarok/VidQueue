@@ -5,6 +5,8 @@ import subprocess
 import time
 from typing import Generator, Union
 
+from config_loader import CONFIG
+
 # TODO: Extract supported formats to json file in future to separate
 #       configuration from logic.
 SUFFIX_FORMATS = {
@@ -15,8 +17,7 @@ SUFFIX_FORMATS = {
     '.webm', '.wmv'
 }
 
-# TODO: same as Suffix
-GPU = 'NVIDIA'
+GPU = CONFIG['hardware']['gpu']
 
 
 class InvalidMediaError(Exception):
@@ -32,9 +33,7 @@ def is_ffmpeg_installed() -> bool:
 def is_supported_file(file_path: pathlib.Path) -> bool:
     """Validates whether the input file exists
         and has a supported extension."""
-    if file_path.is_file() and file_path.suffix.lower() in SUFFIX_FORMATS:
-        return True
-    return False
+    return file_path.is_file() and file_path.suffix.lower() in SUFFIX_FORMATS
 
 
 def check_dest_path(path: pathlib.Path) -> None:
