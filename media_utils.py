@@ -55,7 +55,7 @@ def get_video_width(file_path: pathlib.Path) -> int:
     try:
         result = subprocess.run(commands, capture_output=True,
                                 text=True, check=True).stdout
-        return int(result)
+        return int(result.splitlines()[0])
 
     except subprocess.CalledProcessError as e:
         error_msg = f"ERROR: ffprobe encountered a problem with {file_path}"
