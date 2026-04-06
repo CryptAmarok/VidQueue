@@ -1,8 +1,9 @@
 import argparse
 import ast
+import math
 from datetime import datetime
 from pathlib import Path
-from typing import Any
+from typing import Any, Generator
 
 import media_utils
 from config_loader import CONFIG
@@ -30,118 +31,173 @@ def parse_kwargs(kwlist: list) -> dict[str, Any]:
     }
 
 
+def show_list(files: list) -> Generator[str, None, None]:
+    list_length = len(files)
+    zeros = int(math.log10(list_length)) + 2 if list_length > 0 else 1
+    for index, value in enumerate(files):
+        yield f'{(str(index + 1) + "."):>{zeros}} - {value}'
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(
         description='VidQueue - Automate your video processing queue')
-
-    parser.add_argument(
-        "input_path", type=Path,
-        help=("path to the file or folder with the original recording")
-    )
-    parser.add_argument(
-        "output_path", type=Path,
-        help=("path to the folder where the converted recording will be saved")
-    )
-    parser.add_argument(
-        '-c', '--codec', default=None
-    )
-    parser.add_argument(
-        '-g', '--gpu', action='store_true'
-    )
-    parser.add_argument(
-        "-r", "--num_recordings", type=int,
-        help="Number of recordings to select"
-    )
-    parser.add_argument(
-        '-k', '--kwargs', nargs="*",
-        help=('etra params (e.g. "crf=24" or "b:a=128k") must always use'
-              'the "=" symbol!')
-    )
     parser.add_argument(
         '-v', '--version', action='version',
         version=f'%(prog)s {__version__}'
+    )
+    subparser = parser.add_subparsers(dest='mode', required=True)
+
+    # Run mode
+    parser_run = subparser.add_parser(
+        'run', help="Run the video conversion queue")
+    parser_run.add_argument(
+        "input_path", type=Path,
+        help=("path to the file or folder with the original recording")
+    )
+    parser_run.add_argument(
+        "output_path", type=Path,
+        help=("path to the folder where the converted recording will be saved")
+    )
+    parser_run.add_argument(
+        '-c', '--codec', type=str, default=None,
+        help=("Specify video codec (e.g., libx264, h264_nvenc)")
+    )
+    parser_run.add_argument(
+        '-g', '--gpu', action='store_true',
+        help=("Enable GPU hardware acceleration")
+    )
+    parser_run.add_argument(
+        '-s', '--select', nargs='+', type=lambda x: abs(int(x)),
+        help=("Select files: [count] OR [start count] (e.g., '5', '15 10')")
+    )
+    parser_run.add_argument(
+        '-k', '--kwargs', nargs="*",
+        help=('extra params (e.g. "crf=24" or "b:a=128k") must always use '
+              'the "=" symbol!')
+    )
+
+    # list mode
+    parser_list = subparser.add_parser('list')
+    parser_list.add_argument(
+        "input_path", type=Path,
+        help=("path to the file or folder with the original recording")
+    )
+    parser_list.add_argument(
+        '-s', '--select', nargs=1, type=lambda x: abs(int(x)),
+        help=("Select files: [count]")
     )
     args = parser.parse_args()
 
     # Check input types as booleans
     is_input_dir = args.input_path.is_dir()
+    # Safely extract '-s' args and force positive values to prevent slicing bugs
+    select_val = getattr(args, 'select', None)
+
+    if select_val and len(select_val) > 2:
+        parser.error("argument -s/--select: expected at most 2 arguments.")
 
     if not media_utils.is_ffmpeg_installed():
         print("FFmpeg not installed")
         return 1
-
-    if args.output_path.suffix:
-        print("The output path must be a directory, not a file.")
-        return 1
-
-    # create a folder for converted recordings if not exists
-    media_utils.check_dest_path(args.output_path)
 
     if not is_input_dir and not media_utils.is_supported_file(args.input_path):
         print("The video is not supported.")
         return 1
 
     if is_input_dir:
-        # Find all files and sort them from largest to smallest
+        # Find all supported files and sort them from largest to smallest
         all_paths = list(Path(args.input_path).rglob('*'))
-        files = [f for f in all_paths if f.is_file()]
+        files = [
+            f for f in all_paths
+            if f.is_file() and media_utils.is_supported_file(f)
+        ]
         files.sort(key=lambda f: f.stat().st_size, reverse=True)
-        largest_files = files[:args.num_recordings]
+        # Check if --select is set
+        if select_val and len(select_val) == 1:
+            largest_files = files[:select_val[0]]
+        elif select_val and len(select_val) == 2:
+            start_idx = select_val[0] - 1
+            count = select_val[1]
+            end_idx = start_idx + count
+
+            largest_files = files[start_idx:end_idx]
+        else:
+            largest_files = files
+
     else:
         largest_files = [args.input_path]
 
-    extra = {}
-    if args.kwargs:
-        extra = parse_kwargs(args.kwargs)
+    match args.mode:
 
-    date_now = datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
-    for file in largest_files:
+        case 'run':
+            if args.output_path.suffix:
+                print("The output path must be a directory, not a file.")
+                return 1
 
-        name = file.name
+            # create a folder for converted recordings if not exists
+            media_utils.check_dest_path(args.output_path)
 
-        if not media_utils.is_supported_file(file):
-            print(f'Unsupported file: {name}')
-            if len(largest_files) != 1:
-                with open(f'{date_now}_corrupted.txt', 'a') as f:
-                    f.write(f'Unsupported file: {name}\n')
-                continue
-            return 1
+            extra = {}
+            if args.kwargs:
+                extra = parse_kwargs(args.kwargs)
 
-        width = media_utils.get_video_width(file)
+            date_now = datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
+            for file in largest_files:
 
-        ffmpeg_kwargs = {
-            "file_path": file,
-            "new_file_path": args.output_path / name,
-            "width": width,
-            "codec": args.codec,
-            "gpu": args.gpu,
-            "gpu_vendor": GPU,
-        }
+                name = file.name
 
-        clean_kwargs = {k: v for k, v in ffmpeg_kwargs.items()
-                        if v is not None}
+                if not media_utils.is_supported_file(file):
+                    print(f'Unsupported file: {name}')
+                    if len(largest_files) != 1:
+                        with open(f'{date_now}_corrupted.txt', 'a',
+                                  encoding='utf-8') as f:
+                            f.write(f'Unsupported file: {name}\n')
+                        continue
+                    return 1
 
-        cmd = media_utils.prep_ffmpeg(**clean_kwargs, **extra)
+                width = media_utils.get_video_width(file)
 
-        if cmd is None:
-            return 1
+                ffmpeg_kwargs = {
+                    "file_path": file,
+                    "new_file_path": args.output_path / name,
+                    "width": width,
+                    "codec": args.codec,
+                    "gpu": args.gpu,
+                    "gpu_vendor": GPU,
+                }
 
-        print(clean_kwargs['file_path'].stem)
-        completed = False
-        for process in media_utils.run_ffmpeg(cmd):
-            print(
-                f"\r{process['percent']:.02f}% -- "
-                f"ETA: {process['time_left']} -- {process['bitrate']:<15}",
-                end='', flush=True
-            )
-            if process['percent'] == 100:
-                completed = True
-        if completed:
-            print('Converted!')
-        else:
-            print('Unconverted!')
-            with open(f'{date_now}_corrupted.txt', 'a') as f:
-                f.write(f'Failed to convert: {name}\n')
+                clean_kwargs = {k: v for k, v in ffmpeg_kwargs.items()
+                                if v is not None}
+
+                cmd = media_utils.prep_ffmpeg(**clean_kwargs, **extra)
+
+                if cmd is None:
+                    return 1
+
+                print(clean_kwargs['file_path'].stem)
+                completed = False
+                for process in media_utils.run_ffmpeg(cmd):
+                    print(
+                        f"\r{process['percent']:.02f}% -- "
+                        f"ETA: {process['time_left']} -- "
+                        f"{process['bitrate']:<15}",
+                        end='', flush=True
+                    )
+                    if process['percent'] == 100:
+                        completed = True
+                if completed:
+                    print('\nConverted!')
+                else:
+                    print('Unconverted!')
+                    with open(f'{date_now}_corrupted.txt', 'a',
+                              encoding='utf-8') as f:
+                        f.write(f'Failed to convert: {name}\n')
+
+        case 'list':
+            for file in show_list(largest_files):
+                print(file)
+        case _:
+            parser.print_help()
 
 
 if __name__ == '__main__':

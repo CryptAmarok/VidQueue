@@ -1,4 +1,4 @@
-# VidQueue ![Version](https://img.shields.io/badge/version-0.1.0-blue)
+# VidQueue ![Version](https://img.shields.io/badge/version-0.2.0-blue)
 >A Python CLI tool for converting recordings, powered by FFmpeg.
 
 ## Features
@@ -28,15 +28,20 @@ cd VidQueue
 The main logic is located in `main.py`. The application uses argparse to handle inputs. Arguments must be provided directly after the script name:
 ### Windows:
 ```bash
-py main.py [arguments]
+py main.py <mode> [arguments]
 ```
 ### Linux/Mac
 ```bash
-python3 main.py [arguments]
+python3 main.py <mode> [arguments]
 ```
 ### Syntax
+Run mode
 ```bash
-py main.py <source_path> <destination_directory> [options]
+py main.py run <source_path> <destination_directory> [options]
+```
+List mode
+```bash
+py main.py list <source_path> [options]
 ```
 ### Mentor Moment
 If a path contains spaces and is not enclosed in quotation marks, the shell (terminal) interprets the space as a delimiter.
@@ -46,19 +51,22 @@ This means the system treats each part of the path as a separate argument. For e
 
 ### Arguments and Options
 
-| Argument/Flag | Decription | Requirement |
-| --- | :--- | :---: |
+| Argument/Flag | Description | Applicable Mode | Requirement |
+| --- | :--- | :---: | :---: |
+| **Modes** | | | |
+| `run` | Starts the video conversion queue or single file. | N/A | Required |
+| `list` | Lists the files that would be processed without converting them. | N/A | Required |
 | **Positional Arguments** | | |
-| `<source_path>` | Full path to the input video file or videos dir (If we end up with a folder, the program will extract all the files that are in it) | Required |
-| `<destination_directory>` | Path to the output folder. If the directory doesn't exist, it will be created automatically. | Required |
-| **Conversion Options** | | |
-| `-c`, `--codec` | Select a supported FFmpeg codec from the provided list. | Optional |
-| `-g`, `--gpu` | Enable GPU acceleration (recommended for 4K resolutions and above). | Optional |
-| `-r`, `--num_recordings` | Limit the number of recordings to be processed from the source. | Optional |
-| `-k`, `--kwargs` | Additional FFmpeg parameters (e.g., `crf=23`, `preset=medium`). *Do not use quotation marks. Separate multiple pairs with spaces*. | Optional |
+| `<source_path>` | Full path to the input video file or videos dir (If a directory is provided, the program will recursively process all supported video files within it). | `run`, `list`| Required |
+| `<destination_directory>` | Path to the output folder. If the directory doesn't exist, it will be created automatically. | `run` | Required |
+| **Conversion Options** | |
+| `-c`, `--codec` | Select a supported FFmpeg codec from the provided list. | `run` | Optional |
+| `-g`, `--gpu` | Enable GPU acceleration (recommended for 4K resolutions and above). | `run` | Optional |
+| `-s`, `--select` | Select files from a directory. <br>**Run mode:** [count] or [start count] (e.g., 5 for first 5, 10 5 for 5 files starting from the 10th) <br>**List mode:** Provide [count] only (e.g., 5). | `run`, `list` | Optional |
+| `-k`, `--kwargs` | Additional FFmpeg parameters (e.g., `crf=23`, `preset=medium`). *Do not use quotation marks. Separate multiple pairs with spaces*. | `run` | Optional |
 | **System Information** | | |
-| `-h`, `--help` | Show the help message and exit. | Optional |
-| `-v`, `--version` | Show program's version number and exit. | Optional |
+| `-h`, `--help` | Show the help message and exit. | Global | Optional |
+| `-v`, `--version` | Show program's version number and exit. | Global | Optional |
 
 ## License
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
