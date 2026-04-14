@@ -5,6 +5,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Generator
 
+import ffmpeg_runner
 import media_utils
 from config_loader import CONFIG
 
@@ -96,7 +97,7 @@ def main() -> int:
     if select_val and len(select_val) > 2:
         parser.error("argument -s/--select: expected at most 2 arguments.")
 
-    if not media_utils.is_ffmpeg_installed():
+    if not ffmpeg_runner.is_ffmpeg_installed():
         print("FFmpeg not installed")
         return 1
 
@@ -155,7 +156,7 @@ def main() -> int:
                         continue
                     return 1
 
-                width = media_utils.get_video_width(file)
+                width = ffmpeg_runner.get_video_width(file)
 
                 ffmpeg_kwargs = {
                     "file_path": file,
@@ -169,14 +170,14 @@ def main() -> int:
                 clean_kwargs = {k: v for k, v in ffmpeg_kwargs.items()
                                 if v is not None}
 
-                cmd = media_utils.prep_ffmpeg(**clean_kwargs, **extra)
+                cmd = ffmpeg_runner.prep_ffmpeg(**clean_kwargs, **extra)
 
                 if cmd is None:
                     return 1
 
                 print(clean_kwargs['file_path'].stem)
                 completed = False
-                for process in media_utils.run_ffmpeg(cmd):
+                for process in ffmpeg_runner.run_ffmpeg(cmd):
                     print(
                         f"\r{process['percent']:.02f}% -- "
                         f"ETA: {process['time_left']} -- "
