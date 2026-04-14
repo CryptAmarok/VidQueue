@@ -1,101 +1,21 @@
-import argparse
-import ast
-import math
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Generator
 
 import ffmpeg_runner
 import media_utils
+from cli import parse_arguments
 from config_loader import CONFIG
+from utils import parse_kwargs, show_list
 
 GPU = CONFIG['hardware']['gpu']
 
-__version__ = CONFIG['project']['version']
-
-
-def _parse_value(value: str) -> Any:
-    try:
-        return ast.literal_eval(value)
-    except (ValueError, SyntaxError):
-        return value
-
-
-def parse_kwargs(kwlist: list) -> dict[str, Any]:
-    """Parse a list of 'key=value' strings into a dict.
-    Example: ['crf=24', 'preset=fast'] -> {'crf': 24, 'preset': 'fast'}
-    """
-    return {
-        key: _parse_value(value)
-        for arg in kwlist
-        for key, value in [arg.split('=', 1)]
-    }
-
-
-def show_list(files: list) -> Generator[str, None, None]:
-    list_length = len(files)
-    zeros = int(math.log10(list_length)) + 2 if list_length > 0 else 1
-    for index, value in enumerate(files):
-        yield f'{(str(index + 1) + "."):>{zeros}} - {value}'
-
 
 def main() -> int:
-    parser = argparse.ArgumentParser(
-        description='VidQueue - Automate your video processing queue')
-    parser.add_argument(
-        '-v', '--version', action='version',
-        version=f'%(prog)s {__version__}'
-    )
-    subparser = parser.add_subparsers(dest='mode', required=True)
 
-    # Run mode
-    parser_run = subparser.add_parser(
-        'run', help="Run the video conversion queue")
-    parser_run.add_argument(
-        "input_path", type=Path,
-        help=("path to the file or folder with the original recording")
-    )
-    parser_run.add_argument(
-        "output_path", type=Path,
-        help=("path to the folder where the converted recording will be saved")
-    )
-    parser_run.add_argument(
-        '-c', '--codec', type=str, default=None,
-        help=("Specify video codec (e.g., libx264, h264_nvenc)")
-    )
-    parser_run.add_argument(
-        '-g', '--gpu', action='store_true',
-        help=("Enable GPU hardware acceleration")
-    )
-    parser_run.add_argument(
-        '-s', '--select', nargs='+', type=lambda x: abs(int(x)),
-        help=("Select files: [count] OR [start count] (e.g., '5', '15 10')")
-    )
-    parser_run.add_argument(
-        '-k', '--kwargs', nargs="*",
-        help=('extra params (e.g. "crf=24" or "b:a=128k") must always use '
-              'the "=" symbol!')
-    )
-
-    # list mode
-    parser_list = subparser.add_parser('list')
-    parser_list.add_argument(
-        "input_path", type=Path,
-        help=("path to the file or folder with the original recording")
-    )
-    parser_list.add_argument(
-        '-s', '--select', nargs=1, type=lambda x: abs(int(x)),
-        help=("Select files: [count]")
-    )
-    args = parser.parse_args()
+    args = parse_arguments()
 
     # Check input types as booleans
     is_input_dir = args.input_path.is_dir()
-    # Safely extract '-s' args and force positive values to prevent slicing bugs
-    select_val = getattr(args, 'select', None)
-
-    if select_val and len(select_val) > 2:
-        parser.error("argument -s/--select: expected at most 2 arguments.")
 
     if not ffmpeg_runner.is_ffmpeg_installed():
         print("FFmpeg not installed")
@@ -114,11 +34,11 @@ def main() -> int:
         ]
         files.sort(key=lambda f: f.stat().st_size, reverse=True)
         # Check if --select is set
-        if select_val and len(select_val) == 1:
-            largest_files = files[:select_val[0]]
-        elif select_val and len(select_val) == 2:
-            start_idx = select_val[0] - 1
-            count = select_val[1]
+        if args.select and len(args.select) == 1:
+            largest_files = files[:args.select[0]]
+        elif args.select and len(args.select) == 2:
+            start_idx = args.select[0] - 1
+            count = args.select[1]
             end_idx = start_idx + count
 
             largest_files = files[start_idx:end_idx]
@@ -197,8 +117,7 @@ def main() -> int:
         case 'list':
             for file in show_list(largest_files):
                 print(file)
-        case _:
-            parser.print_help()
+    return 0
 
 
 if __name__ == '__main__':
