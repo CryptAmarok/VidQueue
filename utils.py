@@ -103,7 +103,7 @@ def build_ffmpeg_kwargs(file: Path, args) -> dict:
         "new_file_path": args.output_path / file.name,
         "width": width,
         "codec": args.codec,
-        "gpu": args.gpu,
+        "is_gpu": args.gpu,
         "gpu_vendor": GPU,
     }
 

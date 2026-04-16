@@ -1,4 +1,4 @@
-# VidQueue ![Version](https://img.shields.io/badge/version-0.2.0-blue)
+# VidQueue ![Version](https://img.shields.io/badge/version-0.2.2-blue)
 >A Python CLI tool for converting recordings, powered by FFmpeg.
 
 ## Features
