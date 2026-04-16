@@ -5,10 +5,31 @@ from pathlib import Path
 from typing import Any, Generator
 
 import ffmpeg_runner
-import media_utils
 from config_loader import CONFIG
 
 GPU = CONFIG['hardware']['gpu']
+
+# TODO: Extract supported formats to json file in future to separate
+#       configuration from logic.
+SUFFIX_FORMATS = {
+    '.avi', '.flv',
+    '.m4v', '.mp4',
+    '.mkv', '.mov',
+    '.mpg', '.mpeg',
+    '.webm', '.wmv'
+}
+
+
+def is_supported_file(file_path: Path) -> bool:
+    """Validates whether the input file exists
+        and has a supported extension."""
+    return file_path.is_file() and file_path.suffix.lower() in SUFFIX_FORMATS
+
+
+def check_dest_path(path: Path) -> None:
+    """Check whether path is exists, if not, create it"""
+    if not path.is_dir():
+        path.mkdir(parents=True, exist_ok=True)
 
 
 def _parse_value(value: str) -> Any:
@@ -49,7 +70,7 @@ def get_target_files(input_path: Path,
         all_paths = list(input_path.rglob('*'))
         files = [
             f for f in all_paths
-            if f.is_file() and media_utils.is_supported_file(f)
+            if f.is_file() and is_supported_file(f)
         ]
         files.sort(key=lambda f: f.stat().st_size, reverse=True)
         # Check if --select is set
@@ -79,7 +100,7 @@ def validate_environment(args) -> int:
 
     # Check input types as booleans
     is_input_dir = args.input_path.is_dir()
-    if not is_input_dir and not media_utils.is_supported_file(args.input_path):
+    if not is_input_dir and not is_supported_file(args.input_path):
         print("The video is not supported.")
         return 1
 
@@ -115,7 +136,7 @@ def process_file(file, args, extra: dict, date_now: str,
     """Convert a single media file using ffmpeg."""
     name = file.name
 
-    if not media_utils.is_supported_file(file):
+    if not is_supported_file(file):
         print(f'Unsupported file: {name}')
         if len(total_files) != 1:
             log_corrupted(date_now, f'Unsupported file: {name}')
@@ -156,7 +177,7 @@ def run_mode(args, total_files: list[Path]) -> int:
         return 1
 
     # create a folder for converted recordings if not exists
-    media_utils.check_dest_path(args.output_path)
+    check_dest_path(args.output_path)
 
     extra = {}
     if args.kwargs:
