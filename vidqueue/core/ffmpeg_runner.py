@@ -6,7 +6,7 @@ import subprocess
 import time
 from typing import Generator, Union
 
-from config_loader import CONFIG
+from vidqueue.config  import CONFIG
 
 
 GPU = CONFIG['hardware']['gpu']

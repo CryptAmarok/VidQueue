@@ -1,5 +1,6 @@
-from cli import parse_arguments
-from utils import get_target_files, list_mode, run_mode, validate_environment
+from vidqueue.cli import parse_arguments
+from vidqueue.utils import (get_target_files, list_mode, run_mode,
+                            validate_environment)
 
 
 def main() -> int:

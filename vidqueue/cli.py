@@ -1,7 +1,7 @@
 import argparse
 from pathlib import Path
 
-from config_loader import CONFIG
+from vidqueue.config import CONFIG
 
 
 __version__ = CONFIG['project']['version']
