@@ -1,11 +1,24 @@
 # VidQueue ![Version](https://img.shields.io/badge/version-0.2.2-blue)
 >A Python CLI tool for converting recordings, powered by FFmpeg.
 
+## Why?
+Processing multiple video files manually is slow and repetitive.
+VidQueue introduces a queue-based approach to automate and manage video processing tasks.
+Many raw recordings are very large, even though they could take up much less space. 
+FFmpeg requires studying complex documentation even for basic use, 
+while VidQueue simplifies these instructions into a user-friendly CLI.
+
 ## Features
 - Automated batch conversion of video files via FFmpeg integration.
 - Simplified command-line usage for the ffmpeg tool.
 - Ability to create queues for converting multiple videos.
 - Intuitive monitoring of the conversion process status
+
+## Features
+- Queue-based video processing
+- Supports multiple modes (run, list)
+- CLI interface
+- Built on top of ffmpeg
 
 ## Installation
 
