@@ -1,9 +1,43 @@
-from pathlib import Path
 import re
 import subprocess
+from pathlib import Path
 from typing import Generator
 
-from media_utils import get_video_length
+from media_utils import get_video_length, get_video_width
+
+
+MODE_CONFIGS = {
+    'fast': {
+        'default_filter': "[0:v][1:v]ssim;[0:v][1:v]psnr",
+        'regexes': {
+            "ssim": re.compile(r"All:(\d+\.\d+)"),
+            "psnr": re.compile(r"average:(\d+\.\d+)")
+        }
+    },
+    'deep': {
+        'default_filter': "[1:v][0:v]libvmaf",
+        'regexes': {
+            "vmaf": re.compile(r"score: (\d+\.\d+)")
+        }
+    }
+}
+
+
+def _metric_filters(mode: str) -> str:
+
+    if mode == 'deep':
+        return "[1:v][0:v]scale2ref[dist][ref];[dist][ref]libvmaf"
+    elif mode == 'fast':
+        step_scale = "[1:v][0:v]scale2ref[dist][ref]"
+        step_split_dist = "[dist]split=2[dist1][dist2]"
+        step_split_ref = "[ref]split=2[ref1][ref2]"
+        step_ssim = "[dist1][ref1]ssim"
+        step_psnr = "[dist2][ref2]psnr"
+        return ';'.join(
+            [step_scale, step_split_dist, step_split_ref,
+             step_ssim, step_psnr]
+        )
+    raise ValueError(f"Invalid mode: '{mode}'.")
 
 
 def analyze(
@@ -49,23 +83,29 @@ def analyze(
             mode is provided.
     """
 
+    if not isinstance(mode, str):
+        raise ValueError(f"Invalid mode type: {type(mode).__name__}.")
+
+    mode = mode.lower().strip()
+
+    if mode not in MODE_CONFIGS:
+        raise ValueError(f"Invalid mode: '{mode}'. Expected 'fast' or 'deep'.")
+
     if not file_path.exists() or not compressed_file_path.exists():
         raise ValueError("Input file don't exists. Check paths")
 
+    original_vid = get_video_width(file_path)
+    convert_vid = get_video_width(compressed_file_path)
+
+    is_resize = original_vid != convert_vid
+
     patterns = {}
-    mode = mode.lower().strip() if isinstance(mode, str) else mode
-    if mode == 'fast':
-        filters = "[0:v][1:v]ssim;[0:v][1:v]psnr"
-        re_ssim = re.compile(r"All:(\d+\.\d+)")
-        re_psnr = re.compile(r"average:(\d+\.\d+)")
-        patterns["ssim"] = re_ssim
-        patterns["psnr"] = re_psnr
-    elif mode == 'deep':
-        filters = "libvmaf"
-        re_vmaf = re.compile(r"score: (\d+\.\d+)")
-        patterns["vmaf"] = re_vmaf
+    if is_resize:
+        filters = _metric_filters(mode)
     else:
-        raise ValueError(f"Invalid mode: '{mode}'. Expected 'fast' or 'deep'.")
+        filters = MODE_CONFIGS[mode]['default_filter']
+
+    patterns = MODE_CONFIGS[mode]['regexes']
 
     ffmpeg_args = [
         'ffmpeg',
