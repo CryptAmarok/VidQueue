@@ -10,6 +10,7 @@ __version__ = CONFIG['project']['version']
 def parse_arguments():
     parser = argparse.ArgumentParser(
         description='VidQueue - Automate your video processing queue')
+    parser.set_defaults(select=None)
     parser.add_argument(
         '-v', '--version', action='version',
         version=f'%(prog)s {__version__}'
@@ -75,8 +76,7 @@ def parse_arguments():
     Safely extract '-s' args and force positive values to prevent 
     slicing bugs
     '''
-    select_val = getattr(args, 'select', None)
-    if select_val and len(select_val) > 2:
+    if args.select and len(args.select) > 2:
         parser.error("argument -s/--select: expected at most 2 arguments.")
 
     return args
