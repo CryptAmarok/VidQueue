@@ -56,6 +56,20 @@ def parse_arguments():
         help=("Select files: [count]")
     )
 
+    # analyze mode
+    parser_analyze = subparser.add_parser('analyze')
+    parser_analyze.add_argument(
+        "input_path", type=Path
+    )
+    parser_analyze.add_argument(
+        "output_path", type=Path
+    )
+    parser_analyze.add_argument(
+        "mode", type=str,
+        choices=['fast', 'deep'], default='fast',
+        nargs='?'
+    )
+
     args = parser.parse_args()
     '''
     Safely extract '-s' args and force positive values to prevent 
