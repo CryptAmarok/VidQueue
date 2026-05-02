@@ -4,7 +4,8 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Generator
 
-from .core import ffmpeg_runner
+from vidqueue.core import ffmpeg_runner
+from vidqueue.video_analyzer import analyze
 from vidqueue.config import CONFIG
 
 GPU = CONFIG['hardware']['gpu']

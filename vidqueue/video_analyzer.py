@@ -3,7 +3,7 @@ import subprocess
 from pathlib import Path
 from typing import Generator
 
-from core.ffmpeg_runner import get_video_length, get_video_width
+from vidqueue.core.ffmpeg_runner import get_video_length, get_video_width
 
 
 MODE_CONFIGS = {
