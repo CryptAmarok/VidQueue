@@ -1,6 +1,6 @@
 from vidqueue.cli import parse_arguments
-from vidqueue.utils import (get_target_files, list_mode, run_mode,
-                            validate_environment)
+from vidqueue.utils import (analyze_mode, get_target_files, list_mode,
+                            run_mode, validate_environment)
 
 
 def main() -> int:
@@ -18,6 +18,8 @@ def main() -> int:
             return run_mode(args, largest_files)
         case 'list':
             return list_mode(largest_files)
+        case 'analyze':
+            return analyze_mode(args)
     return 0
 
 

@@ -62,6 +62,7 @@ def show_list(files: list[Path]) -> Generator[str, None, None]:
         yield f'{(str(index + 1) + "."):>{zeros}} - {value}'
 
 
+# run mode
 def get_target_files(input_path: Path,
                      select_args: list[int] | None) -> list[Path]:
     """Return a list of target media files based on input path and 
@@ -200,7 +201,21 @@ def run_mode(args, total_files: list[Path]) -> int:
     return 0
 
 
+# list mode
 def list_mode(total_files: list[Path]) -> None:
     """Print a numbered list of target files to stdout."""
     for file in show_list(total_files):
         print(file)
+
+
+# analyze mode
+def analyze_mode(args):
+
+    for process in analyze(args.input_path, args.output_path, args.intensity):
+
+        if process['final'] is None:
+            # \033[K - clear the line to the end
+            print(f"\rprocessing: {process['percent']}%\033[K",
+                  end='', flush=True)
+        else:
+            print(f"\rquality: {process['final']}\033[K")

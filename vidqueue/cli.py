@@ -66,7 +66,7 @@ def parse_arguments():
         "output_path", type=Path
     )
     parser_analyze.add_argument(
-        "mode", type=str,
+        "intensity", type=str,
         choices=['fast', 'deep'], default='fast',
         nargs='?'
     )
