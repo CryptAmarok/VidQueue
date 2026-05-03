@@ -70,6 +70,9 @@ def parse_arguments():
         choices=['fast', 'deep'], default='fast',
         nargs='?'
     )
+    parser_analyze.add_argument(
+        "-l", "--log", action="store_true"
+    )
 
     args = parser.parse_args()
     '''

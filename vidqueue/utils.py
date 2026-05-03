@@ -209,8 +209,17 @@ def list_mode(total_files: list[Path]) -> None:
 
 
 # analyze mode
-def analyze_mode(args):
+def analyze_mode(args) -> int:
+    """Performs video analysis and optionally saves the result to a file.
 
+    Args:
+        args (argparse.Namespace): CLI arguments containing paths and 
+        settings.
+
+    Returns:
+        int: 0 for success, 1 if no result was produced.
+    """
+    res = None
     for process in analyze(args.input_path, args.output_path, args.intensity):
 
         if process['final'] is None:
@@ -218,4 +227,18 @@ def analyze_mode(args):
             print(f"\rprocessing: {process['percent']}%\033[K",
                   end='', flush=True)
         else:
-            print(f"\rquality: {process['final']}\033[K")
+            res = process['final']
+            print(f"\rquality: {res}\033[K")
+
+    if res is None:
+        return 1
+
+    if args.log:
+        # TODO: Extract filename logic
+        report_path = f"{args.input_path.stem}.json"
+        with open(report_path, 'w', encoding="UTF-8") as f:
+            f.write(
+                f"file: {args.input_path.name} -> {args.output_path.name}\n")
+            f.write(f"scan mode: {args.intensity}\n")
+            f.write(f"result: {res}")
+        return 0
