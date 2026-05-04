@@ -20,6 +20,7 @@ SUFFIX_FORMATS = {
     '.webm', '.wmv'
 }
 
+
 def is_supported_file(file_path: Path) -> bool:
     """Validates whether the input file exists
         and has a supported extension."""
@@ -228,7 +229,6 @@ def analyze_mode(args) -> int:
         else:
             res = process['final']
             print(f"\rquality: {res}\033[K")
-
     if res is None:
         return 1
 

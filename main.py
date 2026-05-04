@@ -1,3 +1,6 @@
+import ctypes
+import os
+
 from vidqueue.cli import parse_arguments
 from vidqueue.utils import (analyze_mode, get_target_files, list_mode,
                             run_mode, validate_environment)
@@ -24,4 +27,8 @@ def main() -> int:
 
 
 if __name__ == '__main__':
+    if os.name == 'nt':  # Windows:
+        # Enable Virtual Terminal Processing to support ANSI
+        kernel32 = ctypes.windll.kernel32
+        kernel32.SetConsoleMode(kernel32.GetStdHandle(-11), 7)
     main()
