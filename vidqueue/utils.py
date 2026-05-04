@@ -20,7 +20,6 @@ SUFFIX_FORMATS = {
     '.webm', '.wmv'
 }
 
-
 def is_supported_file(file_path: Path) -> bool:
     """Validates whether the input file exists
         and has a supported extension."""
@@ -158,7 +157,7 @@ def process_file(file, args, extra: dict, date_now: str,
         print(
             f"\r{process['percent']:.02f}% -- "
             f"ETA: {process['time_left']} -- "
-            f"{process['bitrate']:<15}",
+            f"{process['bitrate']}\033[K",
             end='', flush=True
         )
         if process['percent'] == 100:
