@@ -1,5 +1,6 @@
 import re
 import subprocess
+import time
 from pathlib import Path
 from typing import Generator
 
@@ -126,16 +127,23 @@ def analyze(
         re_parser = re.compile(r"(\w+)=\s*([^\s]+)")
         percent = 0.0
         results = {}
+
+        first_time = time.monotonic()
         for line in process.stdout:
             if 'time=' in line:
+                control_time = time.monotonic()
                 d_line = dict(re_parser.findall(line))
                 try:
+                    # Throttle UI updates to 0.5s to prevent flickering
+                    if not (control_time - first_time >= 0.5):
+                        continue
                     h, m, s = d_line['time'].split(':')
                     raw_time = round((int(h) * 3600) +
                                      (int(m) * 60) + float(s), 2)
                     percent = min(100, (raw_time/length) * 100)
                     yield {'percent': round(percent, 2),
                            'final': None}
+                    first_time = time.monotonic()
                 except ValueError:
                     pass
                 continue
