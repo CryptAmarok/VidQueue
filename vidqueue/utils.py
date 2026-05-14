@@ -24,7 +24,7 @@ SUFFIX_FORMATS = {
 def is_supported_file(file_path: Path) -> bool:
     """Validates whether the input file exists
         and has a supported extension."""
-    return file_path.is_file() and file_path.suffix.lower() in SUFFIX_FORMATS
+    return file_path.suffix.lower() in SUFFIX_FORMATS
 
 
 def check_dest_path(path: Path) -> None:
@@ -65,7 +65,7 @@ def show_list(files: list[Path]) -> Generator[str, None, None]:
 # run mode
 def get_target_files(input_path: Path,
                      select_args: list[int] | None) -> list[Path]:
-    """Return a list of target media files based on input path and 
+    """Return a list of target media files based on input path and
     selection."""
     if input_path.is_dir():
         # Find all supported files and sort them from largest to smallest
@@ -98,6 +98,12 @@ def validate_environment(args) -> int:
 
     if not ffmpeg_runner.is_ffmpeg_installed():
         print("FFmpeg not installed")
+        return 1
+
+    # Check if the input path exists
+    input_path = args.input_path
+    if not input_path.exists():
+        print(f"The input path: '{input_path}' doesn't exist. Check the path")
         return 1
 
     # Check input types as booleans
@@ -213,12 +219,18 @@ def analyze_mode(args) -> int:
     """Performs video analysis and optionally saves the result to a file.
 
     Args:
-        args (argparse.Namespace): CLI arguments containing paths and 
+        args (argparse.Namespace): CLI arguments containing paths and
         settings.
 
     Returns:
         int: 0 for success, 1 if no result was produced.
     """
+
+    if not args.output_path.is_file():
+        print(f"The output file: '{args.output_path}' doesn't "
+              "exist. Check the path")
+        return 1
+
     res = None
     for process in analyze(args.input_path, args.output_path, args.intensity):
 
