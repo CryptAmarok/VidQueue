@@ -25,6 +25,9 @@ while VidQueue simplifies these instructions into a user-friendly CLI.
 - **Python 3.14+**: The project was built and tested using Python 3.14.0 (64-bit). 
 - **FFmpeg**: This tool is a wrapper for FFmpeg. You must have it installed and added to your system's PATH.
   - Download from the official website: [ffmpeg.org/download.html](https://ffmpeg.org/download.html)
+  - Ensure your FFmpeg build includes the required filters and codecs
+    - **Analysis filters:** If you use video analysis features, your FFmpeg build must support the required analysis filters, such as **SSNR**, **PSNR**, and **VMAF**
+    - The required filters can be chcecked using `ffmpeg -filters` and the required codecs can be chceck using `ffmpeg -codecs`
 ### Build and Setup
 1. Clone the repository to your local machine:
 ```bash
@@ -121,3 +124,8 @@ Deep analysis is computationally expensive and takes significantly longer to com
 
 ## License
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## Support
+If you find VidQueue helpful, you can support my work here:
+
+[![Ko-fi](https://img.shields.io/badge/Ko--fi-support-ff5e5b?logo=ko-fi&logoColor=white)](https://ko-fi.com/chrisamarok)
