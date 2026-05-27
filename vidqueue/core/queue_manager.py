@@ -1,31 +1,33 @@
 from pathlib import Path
 import json
 
-STATE_DIR = Path(__file__).parents[2]
+STATE_DIR = Path(__file__).resolve().parents[2]
 STATE_FILE = STATE_DIR / ".queue_state.json"
 TMP_FILE = STATE_DIR / ".queue_state.tmp"
 
 
-def save_queue_state(video_paths: list[Path], output_path: Path) -> None:
+def save_queue_state(video_paths: list[Path], args: list) -> None:
     """Save current queue state to a JSON file"""
     if not video_paths:
         return
 
+    arguments = args.copy()
+
     queue = video_paths[::-1]
+    input_index = arguments.index('-i')
+    del arguments[input_index + 1]
+    output_file_path = Path(arguments.pop())
+    output_path = output_file_path.parent
     data = {
         'videos_list': [str(path) for path in queue],
-        'output_path': str(output_path)
+        'output_path': str(output_path),
+        'ffmpeg_settings': arguments
     }
 
     with TMP_FILE.open("w", encoding="utf-8") as f:
         json.dump(data, f)
 
     TMP_FILE.replace(STATE_FILE)
-
-
-def get_next_video():
-    pass
-
 
 def is_empty():
     pass
