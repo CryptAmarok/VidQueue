@@ -29,5 +29,18 @@ def save_queue_state(video_paths: list[Path], args: list) -> None:
 
     TMP_FILE.replace(STATE_FILE)
 
-def is_empty():
-    pass
+def is_empty() -> bool:
+    
+    # if the file doesn't exist
+    if not STATE_FILE.exists():
+        return True
+    
+    with STATE_FILE.open("r", encoding="utf-8") as f:
+        try:
+            data = json.load(f)
+            video_list = data.get('video_list', [])
+            return video_list == 0
+
+        except:
+            # file is corrupted
+            return True
