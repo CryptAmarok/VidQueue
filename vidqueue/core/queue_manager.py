@@ -62,9 +62,19 @@ def is_empty() -> bool:
     with STATE_FILE.open("r", encoding="utf-8") as f:
         try:
             data = json.load(f)
-            video_list = data.get('video_list', [])
-            return video_list == 0
+            video_list = data.get('videos_list', [])
+            return len(video_list) == 0
 
         except:
             # file is corrupted
             return True
+
+def clear_queue() -> None:
+    with STATE_FILE.open("r", encoding="utf-8") as f:
+        try:
+            data = json.load(f)
+        except:
+            return
+    video_list = data.get('videos_list', [])
+    if len(video_list) == 0:
+        STATE_FILE.unlink()
