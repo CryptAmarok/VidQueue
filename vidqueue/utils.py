@@ -139,6 +139,21 @@ def build_ffmpeg_kwargs(file: Path, args) -> dict:
     return {k: v for k, v in ffmpeg_kwargs.items() if v is not None}
 
 
+def execute_ffmpeg(cmd: list) -> bool:
+    try:
+        for process in ffmpeg_runner.run_ffmpeg(cmd):
+            print(
+                f"\r{process['percent']:.02f}% -- "
+                f"ETA: {process['time_left']} -- "
+                f"{process['bitrate']}\033[K",
+                end='', flush=True
+            )
+
+        return True
+    except Exception:
+        return False
+
+
 def process_file(file, args, extra: dict, date_now: str,
                  total_files: list) -> int:
     """Convert a single media file using ffmpeg."""
@@ -159,16 +174,7 @@ def process_file(file, args, extra: dict, date_now: str,
         return 1
 
     print(clean_kwargs['file_path'].stem)
-    completed = False
-    for process in ffmpeg_runner.run_ffmpeg(cmd):
-        print(
-            f"\r{process['percent']:.02f}% -- "
-            f"ETA: {process['time_left']} -- "
-            f"{process['bitrate']}\033[K",
-            end='', flush=True
-        )
-        if process['percent'] == 100:
-            completed = True
+    completed = execute_ffmpeg(cmd)
     if completed:
         print('\nConverted!')
         return 0
@@ -255,13 +261,15 @@ def analyze_mode(args) -> int:
         return 0
 
 # resume
+
+
 def resume_mode() -> int:
     load_queue = queue_manager.load_queue()
 
     if load_queue is None:
         print("File isn't exist")
         return 0
-    
+
     video_list = load_queue['videos_list']
     output = load_queue['output_path']
     cmd = load_queue['ffmpeg_settings']
@@ -271,4 +279,3 @@ def resume_mode() -> int:
     cmd.append(output)
 
     ffmpeg_runner.run_ffmpeg(cmd)
-    
