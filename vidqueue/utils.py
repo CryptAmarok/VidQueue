@@ -5,9 +5,9 @@ from pathlib import Path
 from typing import Any, Generator
 
 from vidqueue.core import ffmpeg_runner
+from vidqueue.core import queue_manager
 from vidqueue.video_analyzer import analyze
 from vidqueue.config import CONFIG
-
 GPU = CONFIG['hardware']['gpu']
 
 # TODO: Extract supported formats to json file in future to separate
@@ -253,3 +253,22 @@ def analyze_mode(args) -> int:
             f.write(f"scan mode: {args.intensity}\n")
             f.write(f"result: {res}")
         return 0
+
+# resume
+def resume_mode() -> int:
+    load_queue = queue_manager.load_queue()
+
+    if load_queue is None:
+        print("File isn't exist")
+        return 0
+    
+    video_list = load_queue['videos_list']
+    output = load_queue['output_path']
+    cmd = load_queue['ffmpeg_settings']
+
+    input_position = cmd.index('-y') + 1
+    cmd.insert(input_position, video_list[-1])
+    cmd.append(output)
+
+    ffmpeg_runner.run_ffmpeg(cmd)
+    
