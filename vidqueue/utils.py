@@ -260,9 +260,8 @@ def analyze_mode(args) -> int:
             f.write(f"result: {res}")
         return 0
 
+
 # resume
-
-
 def resume_mode() -> int:
     load_queue = queue_manager.load_queue()
 
@@ -274,8 +273,15 @@ def resume_mode() -> int:
     output = load_queue['output_path']
     cmd = load_queue['ffmpeg_settings']
 
-    input_position = cmd.index('-y') + 1
-    cmd.insert(input_position, video_list[-1])
-    cmd.append(output)
+    input_position = cmd.index('-i') + 1
+    while video_list:
+        current_cmd = cmd.copy()
+        current_cmd.insert(input_position, video_list[-1])
+        current_cmd.append(f"{output}/{Path(video_list[-1]).name}")
 
-    ffmpeg_runner.run_ffmpeg(cmd)
+        execute_ffmpeg(current_cmd)
+
+        video_list.pop()
+        queue_manager.save_queue_state(video_list, current_cmd)
+    queue_manager.clear_queue()
+    return 0
