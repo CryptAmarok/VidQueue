@@ -4,10 +4,10 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Generator
 
-from vidqueue.core import ffmpeg_runner
-from vidqueue.core import queue_manager
-from vidqueue.video_analyzer import analyze
 from vidqueue.config import CONFIG
+from vidqueue.core import ffmpeg_runner, queue_manager
+from vidqueue.video_analyzer import analyze
+
 GPU = CONFIG['hardware']['gpu']
 
 # TODO: Extract supported formats to json file in future to separate
@@ -269,19 +269,28 @@ def resume_mode() -> int:
         print("File isn't exist")
         return 0
 
-    video_list = load_queue['videos_list']
-    output = load_queue['output_path']
-    cmd = load_queue['ffmpeg_settings']
+    video_list = load_queue['videos_list'].copy()
+    output_path = load_queue['output_path']
+    ffmpeg_cmd = load_queue['ffmpeg_settings']
 
-    input_position = cmd.index('-i') + 1
+    input_index = ffmpeg_cmd.index('__INPUT__')
+    output_index = ffmpeg_cmd.index('__OUTPUT__')
+
     while video_list:
-        current_cmd = cmd.copy()
-        current_cmd.insert(input_position, video_list[-1])
-        current_cmd.append(f"{output}/{Path(video_list[-1]).name}")
+        act_video = video_list[-1]
+        current_cmd = ffmpeg_cmd.copy()
+        current_cmd[input_index] = act_video
+        current_cmd[output_index] = str(
+            Path(output_path) / Path(act_video).name
+        )
 
         execute_ffmpeg(current_cmd)
 
         video_list.pop()
-        queue_manager.save_queue_state(video_list, current_cmd)
+        queue_manager.save_queue_state(
+            video_list,
+            output_path,
+            ffmpeg_cmd
+        )
     queue_manager.clear_queue()
     return 0
