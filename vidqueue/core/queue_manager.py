@@ -7,22 +7,27 @@ STATE_FILE = STATE_DIR / ".queue_state.json"
 TMP_FILE = STATE_DIR / ".queue_state.tmp"
 
 
-def save_queue_state(video_paths: list[Path], args: list) -> None:
-    """Save current queue state to a JSON file"""
+def save_queue_state(video_paths: list[Path], output_path: Path,
+                     ffmpeg_settings: list) -> None:
+    """Save the current queue state to a JSON file."""
     if not video_paths:
         return
 
-    arguments = args.copy()
+    if '-i' not in ffmpeg_settings:
+        raise ValueError("'-i' not found in ffmpeg settings")
 
-    queue = video_paths[::-1]
-    input_index = arguments.index('-i')
-    del arguments[input_index + 1]
-    output_file_path = Path(arguments.pop())
-    output_path = output_file_path.parent
+    ffmpeg_args = ffmpeg_settings.copy()
+
+    #Find the input video position in the ffmpeg command
+    input_index = ffmpeg_args.index('-i') + 1
+    ffmpeg_args[input_index] = '__INPUT__'
+
+    ffmpeg_args[-1] = '__OUTPUT__'
+
     data = {
-        'videos_list': [str(path) for path in queue],
+        'videos_list': [str(path) for path in video_paths[::-1]],
         'output_path': str(output_path),
-        'ffmpeg_settings': arguments,
+        'ffmpeg_settings': ffmpeg_args,
     }
 
     with TMP_FILE.open("w", encoding="utf-8") as f:
@@ -68,6 +73,7 @@ def is_empty() -> bool:
         except:
             # file is corrupted
             return True
+
 
 def clear_queue() -> None:
     with STATE_FILE.open("r", encoding="utf-8") as f:
