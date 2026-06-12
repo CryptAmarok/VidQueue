@@ -252,4 +252,4 @@ def analyze_mode(args) -> int:
                 f"file: {args.input_path.name} -> {args.output_path.name}\n")
             f.write(f"scan mode: {args.intensity}\n")
             f.write(f"result: {res}")
-        return 0
+    return 0
