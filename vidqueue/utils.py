@@ -202,6 +202,9 @@ def run_mode(args, total_files: list[Path]) -> int:
     clean_kwargs = build_ffmpeg_kwargs(sample_file, args)
     ffmpeg_base_args = ffmpeg_runner.prep_ffmpeg(**clean_kwargs, **extra)
 
+    if ffmpeg_base_args is None:
+        return 1
+
     date_now = datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
     for index, file in enumerate(total_files):
         remaining_files = total_files[index:]
