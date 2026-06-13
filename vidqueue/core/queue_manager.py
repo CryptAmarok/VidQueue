@@ -1,6 +1,5 @@
-from pathlib import Path
 import json
-
+from pathlib import Path
 
 STATE_DIR = Path(__file__).resolve().parents[2]
 STATE_FILE = STATE_DIR / ".queue_state.json"
@@ -8,7 +7,7 @@ TMP_FILE = STATE_DIR / ".queue_state.tmp"
 
 
 def save_queue_state(video_paths: list[Path], output_path: Path,
-                     ffmpeg_settings: list) -> None:
+                     ffmpeg_settings: list, sample_width: int | str) -> None:
     """Save the current queue state to a JSON file."""
     if not video_paths:
         return
@@ -18,11 +17,15 @@ def save_queue_state(video_paths: list[Path], output_path: Path,
 
     ffmpeg_args = ffmpeg_settings.copy()
 
-    #Find the input video position in the ffmpeg command
+    # Find the input video position in the ffmpeg command
     input_index = ffmpeg_args.index('-i') + 1
     ffmpeg_args[input_index] = '__INPUT__'
-
     ffmpeg_args[-1] = '__OUTPUT__'
+
+    ffmpeg_args = [
+        str(arg).replace(str(sample_width), '__WIDTH__')
+        for arg in ffmpeg_args
+    ]
 
     data = {
         'videos_list': [str(path) for path in video_paths[::-1]],
@@ -55,7 +58,7 @@ def load_queue() -> dict | None:
             'ffmpeg_settings': ffmpeg_settings
         }
     else:
-        None
+        return None
 
 
 def is_empty() -> bool:

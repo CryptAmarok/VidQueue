@@ -197,8 +197,17 @@ def run_mode(args, total_files: list[Path]) -> int:
     if args.kwargs:
         extra = parse_kwargs(args.kwargs)
 
+    sample_file = total_files[0]
+    sample_width = ffmpeg_runner.get_video_width(sample_file)
+    clean_kwargs = build_ffmpeg_kwargs(sample_file, args)
+    ffmpeg_base_args = ffmpeg_runner.prep_ffmpeg(**clean_kwargs, **extra)
+
     date_now = datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
-    for file in total_files:
+    for index, file in enumerate(total_files):
+        remaining_files = total_files[index:]
+        queue_manager.save_queue_state(
+            remaining_files, args.output_path, ffmpeg_base_args, sample_width
+        )
         try:
             process_code = process_file(
                 file, args, extra, date_now, total_files)
@@ -279,18 +288,26 @@ def resume_mode() -> int:
     while video_list:
         act_video = video_list[-1]
         current_cmd = ffmpeg_cmd.copy()
+
+        act_width = ffmpeg_runner.get_video_width(Path(act_video))
         current_cmd[input_index] = act_video
         current_cmd[output_index] = str(
             Path(output_path) / Path(act_video).name
         )
+        current_cmd = [
+            str(arg).replace('__WIDTH__', str(act_width))
+            for arg in current_cmd
+        ]
 
+        print(Path(act_video).stem)
         execute_ffmpeg(current_cmd)
 
         video_list.pop()
         queue_manager.save_queue_state(
             video_list,
-            output_path,
-            ffmpeg_cmd
+            Path(output_path),
+            ffmpeg_cmd,
+            '__WIDTH__'
         )
     queue_manager.clear_queue()
     return 0
