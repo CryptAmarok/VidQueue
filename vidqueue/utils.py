@@ -223,10 +223,11 @@ def run_mode(args, total_files: list[Path]) -> int:
 
 
 # list mode
-def list_mode(total_files: list[Path]) -> None:
+def list_mode(total_files: list[Path]) -> int:
     """Print a numbered list of target files to stdout."""
     for file in show_list(total_files):
         print(file)
+    return 0
 
 
 # analyze mode
