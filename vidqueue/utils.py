@@ -4,9 +4,9 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Generator
 
-from vidqueue.core import ffmpeg_runner
-from vidqueue.video_analyzer import analyze
 from vidqueue.config import CONFIG
+from vidqueue.core import ffmpeg_runner, queue_manager
+from vidqueue.video_analyzer import analyze
 
 GPU = CONFIG['hardware']['gpu']
 
@@ -139,6 +139,21 @@ def build_ffmpeg_kwargs(file: Path, args) -> dict:
     return {k: v for k, v in ffmpeg_kwargs.items() if v is not None}
 
 
+def execute_ffmpeg(cmd: list) -> bool:
+    try:
+        for process in ffmpeg_runner.run_ffmpeg(cmd):
+            print(
+                f"\r{process['percent']:.02f}% -- "
+                f"ETA: {process['time_left']} -- "
+                f"{process['bitrate']}\033[K",
+                end='', flush=True
+            )
+
+        return True
+    except Exception:
+        return False
+
+
 def process_file(file, args, extra: dict, date_now: str,
                  total_files: list) -> int:
     """Convert a single media file using ffmpeg."""
@@ -159,16 +174,7 @@ def process_file(file, args, extra: dict, date_now: str,
         return 1
 
     print(clean_kwargs['file_path'].stem)
-    completed = False
-    for process in ffmpeg_runner.run_ffmpeg(cmd):
-        print(
-            f"\r{process['percent']:.02f}% -- "
-            f"ETA: {process['time_left']} -- "
-            f"{process['bitrate']}\033[K",
-            end='', flush=True
-        )
-        if process['percent'] == 100:
-            completed = True
+    completed = execute_ffmpeg(cmd)
     if completed:
         print('\nConverted!')
         return 0
@@ -191,8 +197,17 @@ def run_mode(args, total_files: list[Path]) -> int:
     if args.kwargs:
         extra = parse_kwargs(args.kwargs)
 
+    sample_file = total_files[0]
+    sample_width = ffmpeg_runner.get_video_width(sample_file)
+    clean_kwargs = build_ffmpeg_kwargs(sample_file, args)
+    ffmpeg_base_args = ffmpeg_runner.prep_ffmpeg(**clean_kwargs, **extra)
+
     date_now = datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
-    for file in total_files:
+    for index, file in enumerate(total_files):
+        remaining_files = total_files[index:]
+        queue_manager.save_queue_state(
+            remaining_files, args.output_path, ffmpeg_base_args, sample_width
+        )
         try:
             process_code = process_file(
                 file, args, extra, date_now, total_files)
@@ -252,4 +267,48 @@ def analyze_mode(args) -> int:
                 f"file: {args.input_path.name} -> {args.output_path.name}\n")
             f.write(f"scan mode: {args.intensity}\n")
             f.write(f"result: {res}")
+
+    return 0
+
+
+# resume
+def resume_mode() -> int:
+    load_queue = queue_manager.load_queue()
+
+    if load_queue is None:
+        print("File isn't exist")
+        return 0
+
+    video_list = load_queue['videos_list'].copy()
+    output_path = load_queue['output_path']
+    ffmpeg_cmd = load_queue['ffmpeg_settings']
+
+    input_index = ffmpeg_cmd.index('__INPUT__')
+    output_index = ffmpeg_cmd.index('__OUTPUT__')
+
+    while video_list:
+        act_video = video_list[-1]
+        current_cmd = ffmpeg_cmd.copy()
+
+        act_width = ffmpeg_runner.get_video_width(Path(act_video))
+        current_cmd[input_index] = act_video
+        current_cmd[output_index] = str(
+            Path(output_path) / Path(act_video).name
+        )
+        current_cmd = [
+            str(arg).replace('__WIDTH__', str(act_width))
+            for arg in current_cmd
+        ]
+
+        print(Path(act_video).stem)
+        execute_ffmpeg(current_cmd)
+
+        video_list.pop()
+        queue_manager.save_queue_state(
+            video_list,
+            Path(output_path),
+            ffmpeg_cmd,
+            '__WIDTH__'
+        )
+    queue_manager.clear_queue()
     return 0
