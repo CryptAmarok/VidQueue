@@ -74,6 +74,9 @@ def parse_arguments():
         "-l", "--log", action="store_true"
     )
 
+    #resume mode
+    parser_analyze = subparser.add_parser('resume')
+
     args = parser.parse_args()
     '''
     Safely extract '-s' args and force positive values to prevent 

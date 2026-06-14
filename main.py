@@ -4,17 +4,18 @@ import sys
 
 from vidqueue.cli import parse_arguments
 from vidqueue.utils import (analyze_mode, get_target_files, list_mode,
-                            run_mode, validate_environment)
+                            resume_mode, run_mode, validate_environment)
 
 
 def main() -> int:
     """Entry point of the application. Returns exit code."""
     args = parse_arguments()
+    
+    if args.mode != 'resume':
+        if validate_environment(args):
+            return 1
 
-    if validate_environment(args):
-        return 1
-
-    largest_files = get_target_files(args.input_path, args.select)
+        largest_files = get_target_files(args.input_path, args.select)
 
     match args.mode:
 
@@ -24,6 +25,8 @@ def main() -> int:
             return list_mode(largest_files)
         case 'analyze':
             return analyze_mode(args)
+        case 'resume':
+            return resume_mode()
     return 0
 
 
