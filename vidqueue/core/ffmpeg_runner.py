@@ -1,13 +1,11 @@
 import pathlib
 import re
 import shutil
-import shutil
 import subprocess
 import time
-from typing import Generator, Union
+from typing import Generator
 
-from vidqueue.config  import CONFIG
-
+from vidqueue.config import CONFIG
 
 GPU = CONFIG['hardware']['gpu']
 
@@ -136,8 +134,8 @@ def prep_ffmpeg(file_path: pathlib.Path, new_file_path: pathlib.Path,
         return None
 
 
-def run_ffmpeg(cmd_params: list[str]) -> Generator[dict[str, Union[
-        float | str]], None, None]:
+def run_ffmpeg(cmd_params: list[str]) -> Generator[
+        dict[str, float | str], None, None]:
     """
     Run FFmpeg as a subprocess and yield real-time progress data.
 
@@ -178,7 +176,7 @@ def run_ffmpeg(cmd_params: list[str]) -> Generator[dict[str, Union[
         required = ('time', 'bitrate', 'speed')
         regex_parser = re.compile(r"(\w+)=\s*([^\s]+)")
         first_time = time.monotonic()
-        for line in process.stdout:
+        for line in process.stdout: # type: ignore
             if 'time=' in line:
                 second_time = time.monotonic()
                 if not (second_time - first_time >= 1.0 or 'bitrate:' in line):

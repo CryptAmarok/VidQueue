@@ -7,7 +7,8 @@ TMP_FILE = STATE_DIR / ".queue_state.tmp"
 
 
 def save_queue_state(video_paths: list[Path], output_path: Path,
-                     ffmpeg_settings: list, sample_width: int | str) -> None:
+                     ffmpeg_settings: list[str],
+                     sample_width: int | str) -> None:
     """Save the current queue state to a JSON file."""
     if not video_paths:
         return

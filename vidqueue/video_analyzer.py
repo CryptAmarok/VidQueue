@@ -6,7 +6,6 @@ from typing import Generator
 
 from vidqueue.core.ffmpeg_runner import get_video_length, get_video_width
 
-
 MODE_CONFIGS = {
     'fast': {
         'default_filter': "[0:v][1:v]ssim;[0:v][1:v]psnr",
@@ -129,7 +128,7 @@ def analyze(
         results = {}
 
         first_time = time.monotonic()
-        for line in process.stdout:
+        for line in process.stdout: # type: ignore
             if 'time=' in line:
                 control_time = time.monotonic()
                 d_line = dict(re_parser.findall(line))
@@ -186,7 +185,8 @@ def analyze(
     except Exception as e:
         yield {'percent': None, 'final': None, 'error': str(e)}
     finally:
-        process.stdout.close()
+        if process.stdout:
+            process.stdout.close()
 
         if process.poll() is None:
             process.terminate()

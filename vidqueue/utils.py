@@ -222,6 +222,7 @@ def run_mode(args, total_files: list[Path]) -> int:
             if len(total_files) == 1:
                 return 1
             continue
+    queue_manager.clear_queue()
     return 0
 
 
