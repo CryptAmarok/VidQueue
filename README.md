@@ -1,4 +1,4 @@
-# VidQueue ![Version](https://img.shields.io/badge/version-0.3.2-blue)
+# VidQueue ![Version](https://img.shields.io/badge/version-0.4.0-blue)
 >A Python CLI tool for converting recordings, powered by FFmpeg.
 
 ## Why?
@@ -94,6 +94,12 @@ PSNR: **20dB** (0%) to **45dB** (100%)
 **Deep**: Uses VMAF for high-precision perceptual analysis.
 > Unlike standard metrics, VMAF predicts how the human eye perceives quality, making it the industry standard for detecting artifacts that mathematical models might miss.
 
+Resume mode:
+> Resume functionality: the program saves the remaining file queue to allow resuming from the last unprocessed file after an interruption.
+```bash
+py main.py resume
+```
+
 **NOTE:** 
 
 Deep analysis is computationally expensive and takes significantly longer to complete than the fast option
@@ -106,6 +112,7 @@ Deep analysis is computationally expensive and takes significantly longer to com
 | `run` | Starts the video conversion queue or single file. | N/A | Required |
 | `list` | Lists the files that would be processed without converting them. | N/A | Required |
 | `analyze` | Analyze two video recordings and display the quality score. | N/A | Required |
+| `resume` | Resume the video conversion queue after an error | N/A| Required |
 | **Positional Arguments** | | |
 | `<source_path>` | Full path to the input video file or videos dir (If a directory is provided, the program will recursively process all supported video files within it). | `run`, `list`| Required |
 | `<destination_directory>` | Path to the output folder. If the directory doesn't exist, it will be created automatically. | `run` | Required |
