@@ -197,31 +197,33 @@ def run_mode(args, total_files: list[Path]) -> int:
     if args.kwargs:
         extra = parse_kwargs(args.kwargs)
 
-    sample_file = total_files[0]
-    sample_width = ffmpeg_runner.get_video_width(sample_file)
-    clean_kwargs = build_ffmpeg_kwargs(sample_file, args)
-    ffmpeg_base_args = ffmpeg_runner.prep_ffmpeg(**clean_kwargs, **extra)
-
-    if ffmpeg_base_args is None:
-        return 1
-
     date_now = datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
-    for index, file in enumerate(total_files):
-        remaining_files = total_files[index:]
-        queue_manager.save_queue_state(
-            remaining_files, args.output_path, ffmpeg_base_args, sample_width
-        )
+
+    remaining_files = total_files.copy()
+    queue_manager.save_queue_state(
+        remaining_files, args.output_path, {
+            'codec': args.codec, 'gpu': args.gpu}, extra
+    )
+
+    for file in total_files:
+
         try:
             process_code = process_file(
                 file, args, extra, date_now, total_files)
         except KeyboardInterrupt:
             print('Program interrupted by user.')
             return 1
-
         if process_code:
             if len(total_files) == 1:
                 return 1
             continue
+
+        remaining_files.pop(0)
+        queue_manager.save_queue_state(
+            remaining_files, args.output_path, {
+                'codec': args.codec, 'gpu': args.gpu}, extra
+        )
+
     queue_manager.clear_queue()
     return 0
 
@@ -286,34 +288,38 @@ def resume_mode() -> int:
 
     video_list = load_queue['videos_list'].copy()
     output_path = load_queue['output_path']
-    ffmpeg_cmd = load_queue['ffmpeg_settings']
-
-    input_index = ffmpeg_cmd.index('__INPUT__')
-    output_index = ffmpeg_cmd.index('__OUTPUT__')
+    ffmpeg_settings = load_queue['ffmpeg_settings']
+    codec = ffmpeg_settings.get('codec') or 'libx264'
+    is_gpu = ffmpeg_settings.get('gpu') or False
+    extra = ffmpeg_settings.get('kwargs') or {}
 
     while video_list:
-        act_video = video_list[-1]
-        current_cmd = ffmpeg_cmd.copy()
-
+        act_video = Path(video_list[-1])
+        new_file_path = Path(output_path) / act_video.name
         act_width = ffmpeg_runner.get_video_width(Path(act_video))
-        current_cmd[input_index] = act_video
-        current_cmd[output_index] = str(
-            Path(output_path) / Path(act_video).name
-        )
-        current_cmd = [
-            str(arg).replace('__WIDTH__', str(act_width))
-            for arg in current_cmd
-        ]
 
-        print(Path(act_video).stem)
-        execute_ffmpeg(current_cmd)
-
-        video_list.pop()
-        queue_manager.save_queue_state(
-            video_list,
-            Path(output_path),
-            ffmpeg_cmd,
-            '__WIDTH__'
+        current_cmd = ffmpeg_runner.prep_ffmpeg(
+            file_path=act_video,
+            new_file_path=new_file_path,
+            width=act_width,
+            codec=codec,
+            is_gpu=is_gpu,
+            **extra
         )
+
+        if not current_cmd:
+            return 1
+
+        print(act_video.stem)
+        status = execute_ffmpeg(current_cmd)
+
+        if status:
+            video_list.pop()
+            queue_manager.save_queue_state(
+                video_list,
+                Path(output_path),
+                {'codec': codec, 'gpu': is_gpu},
+                extra=extra
+            )
     queue_manager.clear_queue()
     return 0
