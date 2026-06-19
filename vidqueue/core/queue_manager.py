@@ -7,31 +7,19 @@ TMP_FILE = STATE_DIR / ".queue_state.tmp"
 
 
 def save_queue_state(video_paths: list[Path], output_path: Path,
-                     ffmpeg_settings: list[str],
-                     sample_width: int | str) -> None:
+                     ffmpeg_args: dict, extra: dict) -> None:
     """Save the current queue state to a JSON file."""
     if not video_paths:
         return
 
-    if '-i' not in ffmpeg_settings:
-        raise ValueError("'-i' not found in ffmpeg settings")
-
-    ffmpeg_args = ffmpeg_settings.copy()
-
-    # Find the input video position in the ffmpeg command
-    input_index = ffmpeg_args.index('-i') + 1
-    ffmpeg_args[input_index] = '__INPUT__'
-    ffmpeg_args[-1] = '__OUTPUT__'
-
-    ffmpeg_args = [
-        str(arg).replace(str(sample_width), '__WIDTH__')
-        for arg in ffmpeg_args
-    ]
-
     data = {
         'videos_list': [str(path) for path in video_paths[::-1]],
         'output_path': str(output_path),
-        'ffmpeg_settings': ffmpeg_args,
+        'ffmpeg_settings': {
+            'codec': ffmpeg_args.get("codec"),
+            'gpu': ffmpeg_args.get("gpu"),
+            'kwargs': extra
+        }
     }
 
     with TMP_FILE.open("w", encoding="utf-8") as f:
