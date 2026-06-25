@@ -9,8 +9,6 @@ TMP_FILE = STATE_DIR / ".queue_state.tmp"
 def save_queue_state(video_paths: list[Path], output_path: Path,
                      ffmpeg_args: dict, extra: dict) -> None:
     """Save the current queue state to a JSON file."""
-    if not video_paths:
-        return
 
     data = {
         'videos_list': [str(path) for path in video_paths[::-1]],
@@ -48,23 +46,6 @@ def load_queue() -> dict | None:
         }
     else:
         return None
-
-
-def is_empty() -> bool:
-
-    # if the file doesn't exist
-    if not STATE_FILE.exists():
-        return True
-
-    with STATE_FILE.open("r", encoding="utf-8") as f:
-        try:
-            data = json.load(f)
-            video_list = data.get('videos_list', [])
-            return len(video_list) == 0
-
-        except:
-            # file is corrupted
-            return True
 
 
 def clear_queue() -> None:
