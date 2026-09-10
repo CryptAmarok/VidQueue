@@ -1,4 +1,4 @@
-# VidQueue ![Version](https://img.shields.io/badge/version-0.4.1-blue)
+# VidQueue ![Version](https://img.shields.io/badge/version-0.4.2-blue)
 >A Python CLI tool for converting recordings, powered by FFmpeg.
 
 ## Why?
@@ -124,7 +124,7 @@ Deep analysis is computationally expensive and takes significantly longer to com
 | `-g`, `--gpu` | Enable GPU acceleration (recommended for 4K resolutions and above). | `run` | Optional |
 | `-s`, `--select` | Select files from a directory. <br>**Run mode:** [count] or [start count] (e.g., 5 for first 5, 10 5 for 5 files starting from the 10th) <br>**List mode:** Provide [count] only (e.g., 5). | `run`, `list` | Optional |
 | `-k`, `--kwargs` | Additional FFmpeg parameters (e.g., `crf=23`, `preset=medium`). *Do not use quotation marks. Separate multiple pairs with spaces (e.g. `-k crf=23 preset=medium`)*. | `run` | Optional |
-| `-l`, `--log` | Generate a JSON report of the analysis. | `analyze` | Optional |
+| `-l`, `--log` | Generate a `.log` report of the analysis. | `analyze` | Optional |
 | **System Information** | | |
 | `-h`, `--help` | Show the help message and exit. | Global | Optional |
 | `-v`, `--version` | Show program's version number and exit. | Global | Optional |

@@ -7,3 +7,6 @@ website = "https://github.com/CryptAmarok/VidQueue"
 
 [hardware]
 gpu = "NVIDIA" # Manufacturer only
+
+[paths]
+log_analyze_path = "analyze_logs/"

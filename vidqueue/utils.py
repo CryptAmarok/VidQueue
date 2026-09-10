@@ -268,7 +268,9 @@ def analyze_mode(args) -> int:
 
     if args.log:
         # TODO: Extract filename logic
-        report_path = f"{args.input_path.stem}.json"
+        folder_log_path = CONFIG["paths"]["log_analyze_path"]
+        file_name = f"{args.input_path.stem}.log"
+        report_path = Path(f"{folder_log_path}/{file_name}")
         with open(report_path, 'w', encoding="UTF-8") as f:
             f.write(
                 f"file: {args.input_path.name} -> {args.output_path.name}\n")
