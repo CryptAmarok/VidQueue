@@ -40,6 +40,36 @@ def _metric_filters(mode: str) -> str:
     raise ValueError(f"Invalid mode: '{mode}'.")
 
 
+def normalize_metric(value: float, metric_type: str) -> float:
+    """Calculates the normalized quality score for a given metric.
+
+    Args:
+        value (float): The raw metric value.
+        metric_type (str): The type of metric, expected 'ssim' or 'psnr'.
+
+    Returns:
+        float: Normalized quality score in the range 0.0 to 1.0.
+
+    Raises:
+        ValueError: If an unknown metric_type is provided.
+    """
+    match (metric_type.lower()):
+        case "ssim":
+            if value <= 0.9:
+                return 0.0
+            else:
+                return (min(1.0, value) - 0.9) / (1.0 - 0.9)
+        case "psnr":
+            if value <= 20:
+                return 0.0
+            else:
+                return (min(45.0, value) - 20.0) / (45.0 - 20)
+        case _:
+            raise ValueError(
+                f"Metric type unknown: '{metric_type}', "
+                "expected 'ssim' or 'psnr'")
+
+
 def analyze(
         file_path: Path,
         compressed_file_path: Path,
@@ -128,7 +158,7 @@ def analyze(
         results = {}
 
         first_time = time.monotonic()
-        for line in process.stdout: # type: ignore
+        for line in process.stdout:  # type: ignore
             if 'time=' in line:
                 control_time = time.monotonic()
                 d_line = dict(re_parser.findall(line))
