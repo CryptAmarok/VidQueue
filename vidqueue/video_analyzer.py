@@ -72,9 +72,7 @@ def normalize_metric(value: float, metric_type: str) -> float:
 
 def calc_ssim_psnr(ssim, psnr) -> float:
 
-    normalized_psnr = min(psnr / 45, 1.0)
-
-    score = (ssim * 0.85 + normalized_psnr * 0.15)
+    score = (ssim * 0.7 + psnr * 0.3)
 
     return round(score * 100, 2)
 
@@ -198,19 +196,13 @@ def analyze(
                 if ssim_val is not None and psnr_val is not None:
                     percent = 100.0
 
-                    ssim_min = min(0.90, ssim_val)
-                    ssim_max = max(1.0, ssim_val)
+                    ssim = normalize_metric(ssim_val, 'ssim')
+                    psnr = normalize_metric(psnr_val, 'psnr')
 
-                    psnr_min = min(20, psnr_val)
-                    psnr_max = max(45, psnr_val)
-
-                    ssim = 0 if ssim_val <= 0.9 else (
-                        ssim_val - ssim_min) / (ssim_max - ssim_min)
-                    psnr = 0 if psnr_val <= 20 else (
-                        psnr_val - psnr_min) / (psnr_max - psnr_min)
+                    final_res = calc_ssim_psnr(ssim, psnr)
 
                     yield {'percent': percent,
-                           'final': f'{round((((ssim + psnr) / 2) * 100), 2)}%'}
+                           'final': f'{final_res}%'}
                 else:
                     yield {'percent': None, 'final': None}
             case 'deep':
