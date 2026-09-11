@@ -70,6 +70,15 @@ def normalize_metric(value: float, metric_type: str) -> float:
                 "expected 'ssim' or 'psnr'")
 
 
+def calc_ssim_psnr(ssim, psnr) -> float:
+
+    normalized_psnr = min(psnr / 45, 1.0)
+
+    score = (ssim * 0.85 + normalized_psnr * 0.15)
+
+    return round(score * 100, 2)
+
+
 def analyze(
         file_path: Path,
         compressed_file_path: Path,
