@@ -16,19 +16,19 @@ while VidQueue simplifies these instructions into a user-friendly CLI.
 - Intuitive monitoring of the conversion process status
 - Queue-based video processing
 - Supports multiple modes (run, list)
-- CLI interface
+- User-friendly, streamlined CLI interface
 - Built on top of ffmpeg
 - Quality analysis using PSNR, SSIM, and VMAF metrics with simplified scoring
 
 ## Installation
 
 ### Prerequisites
-- **Python 3.14+**: The project was built and tested using Python 3.14.0 (64-bit). 
+- **Python 3.11+**: Built on Python 3.14.0. If you encounter any compatibility issues on 3.11–3.13, please open an Issue!
 - **FFmpeg**: This tool is a wrapper for FFmpeg. You must have it installed and added to your system's PATH.
   - Download from the official website: [ffmpeg.org/download.html](https://ffmpeg.org/download.html)
   - Ensure your FFmpeg build includes the required filters and codecs
-    - **Analysis filters:** If you use video analysis features, your FFmpeg build must support the required analysis filters, such as **SSNR**, **PSNR**, and **VMAF**
-    - The required filters can be chcecked using `ffmpeg -filters` and the required codecs can be chceck using `ffmpeg -codecs`
+    - **Analysis filters:** If you use video analysis features, your FFmpeg build must support the required analysis filters, such as **SSIM**, **PSNR**, and **VMAF**
+    - The required filters can be checked using `ffmpeg -filters` and the required codecs can be checked using `ffmpeg -codecs`
 ### Build and Setup
 1. Clone the repository to your local machine:
 ```bash
@@ -114,19 +114,19 @@ Deep analysis is computationally expensive and takes significantly longer to com
 | `list` | Lists the files that would be processed without converting them. | N/A | Required |
 | `analyze` | Analyze two video recordings and display the quality score. | N/A | Required |
 | `resume` | Resume the video conversion queue after an error | N/A| Required |
-| **Positional Arguments** | | |
+| **Positional Arguments** | | | |
 | `<source_path>` | Full path to the input video file or videos dir (If a directory is provided, the program will recursively process all supported video files within it). | `run`, `list`| Required |
 | `<destination_directory>` | Path to the output folder. If the directory doesn't exist, it will be created automatically. | `run` | Required |
 | `<source_file>` | Source file path. | `analyze` | Required |
 | `<destination_file>` | Converted file path. | `analyze` | Required |
 | `<intensity>` | Scanning depth/intensity (e.g. fast, deep). Default: fast. `fast` - SSIM, PSNR. `deep` - VMAF | `analyze` | Optional |
-| **Conversion Options** | |
+| **Conversion Options** | | | |
 | `-c`, `--codec` | Select a supported FFmpeg codec from the provided list. | `run` | Optional |
 | `-g`, `--gpu` | Enable GPU acceleration (recommended for 4K resolutions and above). | `run` | Optional |
 | `-s`, `--select` | Select files from a directory. <br>**Run mode:** [count] or [start count] (e.g., 5 for first 5, 10 5 for 5 files starting from the 10th) <br>**List mode:** Provide [count] only (e.g., 5). | `run`, `list` | Optional |
 | `-k`, `--kwargs` | Additional FFmpeg parameters (e.g., `crf=23`, `preset=medium`). *Do not use quotation marks. Separate multiple pairs with spaces (e.g. `-k crf=23 preset=medium`)*. | `run` | Optional |
 | `-l`, `--log` | Generate a `.log` report of the analysis. | `analyze` | Optional |
-| **System Information** | | |
+| **System Information** | | | |
 | `-h`, `--help` | Show the help message and exit. | Global | Optional |
 | `-v`, `--version` | Show program's version number and exit. | Global | Optional |
 
