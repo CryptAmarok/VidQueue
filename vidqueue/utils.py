@@ -148,10 +148,20 @@ def execute_ffmpeg(cmd: list) -> bool:
                 f"{process['bitrate']}\033[K",
                 end='', flush=True
             )
-
+        print()
         return True
     except Exception:
         return False
+
+
+def convert_video(file_path: Path, cmd: list[str]) -> bool:
+    print(file_path.stem)
+    completed = execute_ffmpeg(cmd)
+    if completed:
+        print('Converted!')
+        return True
+    print('Unconverted!')
+    return False
 
 
 def process_file(file, args, extra: dict, date_now: str,
@@ -173,14 +183,10 @@ def process_file(file, args, extra: dict, date_now: str,
     if cmd is None:
         return 1
 
-    print(clean_kwargs['file_path'].stem)
-    completed = execute_ffmpeg(cmd)
-    if completed:
-        print('\nConverted!')
-        return 0
-    print('Unconverted!')
-    log_corrupted(date_now, f'Failed to convert: {name}')
-    return 1
+    if not convert_video(clean_kwargs['file_path'], cmd):
+        log_corrupted(date_now, f'Failed to convert: {name}')
+        return 1
+    return 0
 
 
 def run_mode(args, total_files: list[Path]) -> int:
@@ -197,8 +203,6 @@ def run_mode(args, total_files: list[Path]) -> int:
     if args.kwargs:
         extra = parse_kwargs(args.kwargs)
 
-    date_now = datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
-
     remaining_files = total_files.copy()
     queue_manager.save_queue_state(
         remaining_files, args.output_path, {
@@ -207,6 +211,7 @@ def run_mode(args, total_files: list[Path]) -> int:
 
     for file in total_files:
 
+        date_now = datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
         try:
             process_code = process_file(
                 file, args, extra, date_now, total_files)
@@ -295,7 +300,10 @@ def resume_mode() -> int:
     is_gpu = ffmpeg_settings.get('gpu') or False
     extra = ffmpeg_settings.get('kwargs') or {}
 
+    has_errors = False
+
     while video_list:
+        date_now = datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
         act_video = Path(video_list[-1])
         new_file_path = Path(output_path) / act_video.name
         act_width = ffmpeg_runner.get_video_width(Path(act_video))
@@ -312,16 +320,16 @@ def resume_mode() -> int:
         if not current_cmd:
             return 1
 
-        print(act_video.stem)
-        status = execute_ffmpeg(current_cmd)
+        if not convert_video(act_video, current_cmd):
+            log_corrupted(date_now, f'Failed to convert: {act_video}')
+            has_errors = True
 
-        if status:
-            video_list.pop()
-            queue_manager.save_queue_state(
-                video_list,
-                Path(output_path),
-                {'codec': codec, 'gpu': is_gpu},
-                extra=extra
-            )
+        video_list.pop()
+        queue_manager.save_queue_state(
+            video_list,
+            Path(output_path),
+            {'codec': codec, 'gpu': is_gpu},
+            extra=extra
+        )
     queue_manager.clear_queue()
-    return 0
+    return 1 if has_errors else 0

@@ -1,4 +1,4 @@
-# VidQueue ![Version](https://img.shields.io/badge/version-0.4.2-blue) [![Ko-fi](https://img.shields.io/badge/Ko--fi-support-ff5e5b?logo=ko-fi&logoColor=white)](https://ko-fi.com/chrisamarok)
+# VidQueue ![Version](https://img.shields.io/badge/version-0.4.3-blue) [![Ko-fi](https://img.shields.io/badge/Ko--fi-support-ff5e5b?logo=ko-fi&logoColor=white)](https://ko-fi.com/chrisamarok)
 
 >A Python CLI tool for converting recordings, powered by FFmpeg.
 
