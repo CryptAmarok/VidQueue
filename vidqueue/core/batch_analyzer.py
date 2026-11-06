@@ -4,7 +4,7 @@ from ..utils import SUFFIX_FORMATS
 from ..video_analyzer import analyze
 
 
-def get_videos(path_dir: Path) -> dict[str, Path]:
+def _get_videos(path_dir: Path) -> dict[str, Path]:
 
     return {
         p.stem: p for p in path_dir.iterdir()
@@ -12,18 +12,24 @@ def get_videos(path_dir: Path) -> dict[str, Path]:
     }
 
 
+def _get_matched_pairs(original_dir: Path, converted_dir: Path) -> dict[str, tuple[Path, Path]]:
+
+    orig_vids = _get_videos(original_dir)
+    conv_vids = _get_videos(converted_dir)
+
+    common_stems = orig_vids.keys() & conv_vids.keys()
+
+    return {
+        stem: (orig_vids[stem], conv_vids[stem])
+        for stem in sorted(common_stems)
+    }
+
+
 def analyze_queue(original_dir: Path, converted_dir: Path, mode_type: str):
 
-    original_videos = get_videos(original_dir)
-    converted_videos = get_videos(converted_dir)
+    vids_pairs = _get_matched_pairs(original_dir, converted_dir)
 
-    orig_stems = original_videos.keys()
-    conv_stems = converted_videos.keys()
-
-    common_stems = orig_stems & conv_stems
-
-    for video_name in common_stems:
-        orig_file = original_videos[video_name]
-        conv_file = converted_videos[video_name]
+    for name, (orig_file, conv_file) in vids_pairs.items():
+        print(name)
         for step in analyze(orig_file, conv_file, mode_type):
             print(step)
