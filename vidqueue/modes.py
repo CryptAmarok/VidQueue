@@ -4,6 +4,7 @@ from pathlib import Path
 from vidqueue import utils
 from vidqueue.config import CONFIG
 from vidqueue.core import ffmpeg_runner, queue_manager
+from vidqueue.core import matcher
 from vidqueue.video_analyzer import analyze
 
 
@@ -83,6 +84,28 @@ def list_mode(total_files: list[Path]) -> int:
     return 0
 
 
+def _run_analysis(
+    original_video: Path,
+    converted_video: Path,
+    intensity: str
+) -> str | float | None:
+    """Runs analysis, prints terminal progress, and returns final score."""
+    final_score = None
+
+    for status in analyze(original_video, converted_video, intensity):
+        if status["final"] is None:
+            print(
+                f"\rprocessing: {status['percent']}%\033[K",
+                end="",
+                flush=True,
+            )
+        else:
+            final_score = status["final"]
+            print(f"\rquality: {final_score}\033[K")
+
+    return final_score
+
+
 def analyze_mode(args) -> int:
     """Performs video analysis and optionally saves the result to a file.
 
@@ -99,16 +122,8 @@ def analyze_mode(args) -> int:
               "exist. Check the path")
         return 1
 
-    res = None
-    for process in analyze(args.input_path, args.output_path, args.intensity):
+    res = _run_analysis(args.input_path, args.output_path, args.intensity)
 
-        if process['final'] is None:
-            # \033[K - clear the line to the end
-            print(f"\rprocessing: {process['percent']}%\033[K",
-                  end='', flush=True)
-        else:
-            res = process['final']
-            print(f"\rquality: {res}\033[K")
     if res is None:
         return 1
 
@@ -124,6 +139,33 @@ def analyze_mode(args) -> int:
             f.write(f"result: {res}")
 
     return 0
+
+
+def analyze_queue_mode(args) -> int:
+    video_pairs = matcher.get_matched_pairs(args.input_path, args.output_path)
+
+    if not video_pairs:
+        print("No matching video pairs found.")
+        return 0
+
+    has_failure = False
+    for stem, (org_path, con_path) in video_pairs.items():
+        print(stem)
+        if matcher.is_duration_mismatched(org_path, con_path, args.tolerance):
+            print(
+                f"\n[WARN] Skipping '{stem}': duration difference "
+                f"exceeds {args.tolerance}s tolerance."
+            )
+            continue
+        # reduction = matcher.calculate_size_reduction(org_path, con_path)
+
+        res = _run_analysis(org_path, con_path, args.intensity)
+
+        if res is None:
+            has_failure = True
+
+        # TODO calculate reduction and save batch report
+    return 1 if has_failure else 0
 
 
 def resume_mode() -> int:
