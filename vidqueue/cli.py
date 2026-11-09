@@ -74,7 +74,22 @@ def parse_arguments():
         "-l", "--log", action="store_true"
     )
 
-    #resume mode
+    # analyze queue mode
+    parser_analyze_queue = subparser.add_parser(
+        'analyze-queue', aliases=['aq'])
+    parser_analyze_queue.add_argument("input_path", type=Path)
+    parser_analyze_queue.add_argument("output_path", type=Path)
+    parser_analyze_queue.add_argument(
+        "intensity", type=str,
+        choices=['fast', 'deep'], default='fast',
+        nargs='?'
+    )
+    parser_analyze_queue.add_argument(
+        "-t", "--tolerance", type=float, default=0.5,
+        help="Max allowed duration difference in seconds (default: 0.5)"
+    )
+
+    # resume mode
     parser_analyze = subparser.add_parser('resume')
 
     args = parser.parse_args()
