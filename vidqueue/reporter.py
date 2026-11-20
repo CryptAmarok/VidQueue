@@ -2,6 +2,7 @@ from dataclasses import dataclass
 from datetime import datetime, timedelta
 from math import log10
 from pathlib import Path
+from textwrap import dedent
 from typing import Literal
 
 from config import CONFIG  # TODO: fix import path
@@ -10,6 +11,11 @@ LOG_ANALYZE_PATH = Path(CONFIG["paths"]["log_analyze_path"])
 
 SCAN_MODE = Literal["fast", "deep"]
 RECORD_STATUS = Literal["OK", "SKIPPED", "FAILED"]
+
+METRIC_BY_MODE = {
+    "fast": "SSIM",
+    "deep": "VMAF",
+}
 
 
 @dataclass(frozen=True)
@@ -58,4 +64,22 @@ def _build_report_path(
     formatted_time = timestamp.strftime('%Y-%m-%d_%H-%M-%S')
     file_name = f"{formatted_time}_{stem}.{extension}"
     return log_dir_path / file_name
+
+
+def _build_single_report(record: AnalysisRecord) -> str:
+    org_path, conv_path = record.paths
+    dur_org = _format_duration(record.durations[0])
+    dur_conv = _format_duration(record.durations[1])
+    size_before, size_after = record.sizes or (0, 0)
+    saved_bytes = size_before - size_after
+    reduction = record.reduction or 0.0
+
+    return dedent(f"""\
+        File:     {org_path} -> {conv_path}
+        Mode:     {record.mode}
+        Duration: {dur_org} | {dur_conv}
+        Quality:  {record.score}%
+        Size:     {_format_bytes(size_before)} -> {_format_bytes(size_after)}
+            Saved: {_format_bytes(saved_bytes)} - {reduction}%
+    """)
 
